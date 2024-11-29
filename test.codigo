@@ -1,0 +1,35 @@
+{
+  let a:int = 10;
+  let b:int = 20;
+  let c:string = "aaaa";
+  let testchar:char = "a";
+  let @pt1 = 2;
+  let @pt = &b;
+
+
+  2 :
+
+  goto 11 ;
+ 
+  let d: int = 20 + a * b - c;
+
+  let arrayInt: int[] = [1, 2, 3, 4];
+  let arratString: string[] = ["hello", "world"];
+
+  let matrixA: int[][] = [[1, 2], [3, 4]];
+  let matrixB: int[][] = [[1, 2], [3, 4]];
+
+  let matrixC: int[][] = matrixA + matrixB;
+ 
+  while(x < 10) {
+     
+  }
+
+  for(let i:int = 0; i < 25; i++){
+
+  }
+
+  if(x == 10) {
+     log("KAKAKAKKA") ;
+  }
+}

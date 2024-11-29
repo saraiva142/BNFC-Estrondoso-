@@ -1,0 +1,58 @@
+  comment "//" ;
+  comment "/*" "*/" ;
+  
+  Prog. Program  ::= [Function] ;
+  Fun.  Function ::= "{" [Stm] "}" ;
+  Dec.  Decl     ::= Type [Ident] ;
+
+  terminator Function "" ;
+  terminator Stm "" ;
+  separator  Decl "," ;
+  separator  nonempty Ident "," ;
+  
+  SDecl.   Stm ::= Decl ";"  ;
+  SExp.    Stm ::= Exp ";" ;
+  SBlock.  Stm ::= "{" [Stm] "}" ;
+  SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
+  SFor. Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
+  SIf.     Stm ::= "if" "(" Exp ")" Stm ;
+  SReturn. Stm ::= "return" Exp  ";" ;
+  SLabel.  Stm ::= Integer ":" ;
+  SGoto.   Stm ::= "goto" Integer ";" ;
+  SLog.    Stm ::= "log" "(" Exp ")" ";" ; 
+  
+  
+  EAss.    Exp  ::= "let" Ident ":" Type "=" Exp ;
+  EPontMem.   Exp  ::= "let" Typont Ident  "=" "&" Exp ;
+  EPont.   Exp ::= "let" Typont Ident "=" Exp ;
+  EAssArray. Exp ::= "let" Ident ":" Type "[]" "=" "[" [Exp] "]";
+  EAssMatrix. Exp ::= "let" Ident ":" Type "[][]" "=" "[" [Exp] "]" ;
+  EAssMatrixOp. Exp ::= "let" Ident ":" Type "[][]" "=" Exp ;
+  ELt.     Exp1 ::= Exp2 "<" Exp2 ;
+  Equal.   Exp1 ::= Exp2 "==" Exp2 ;
+  
+ 
+  EAdd.    Exp2 ::= Exp2 "+" Exp3 ;
+  ESub.    Exp2 ::= Exp2 "-" Exp3 ;
+  EMul.    Exp3 ::= Exp3 "*" Exp4 ;
+  Call.    Exp4 ::= Ident "(" [Exp] ")" ;
+  EVar.    Exp4 ::= Ident ;
+  EStr.    Exp4 ::= String ;
+  EInt.    Exp4 ::= Integer ;
+  EChar.   Exp4 ::= Char ;
+  EDouble. Exp4 ::= Double ;
+  EIncr.   Exp ::= Ident "++" ";" ;
+  EDecr.   Exp ::= Ident "--" ";" ;
+
+  EIncrWithoutemicolon.  Exp ::= Ident "++" ;
+  EDecrWithoutemicolon.  Exp ::= Ident "--" ;
+  
+  coercions Exp 4 ;
+  
+  separator Exp "," ;
+
+  ExpList. Exp ::= "[" [Exp] "]" ;
+
+  rules Type ::= Type "[" Integer "]" | "int" | "[" String "]" | "string" | "float" | "double" | "char" | Ident ;
+
+  TPonterio.  Typont ::= "@" ; 
