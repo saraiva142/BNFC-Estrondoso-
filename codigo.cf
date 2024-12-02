@@ -33,7 +33,7 @@
   EAPositionInArray.  Exp ::= Ident "[" Integer "]" "=" Ident "[" Integer "]" ;
   EMinor.             Exp1 ::= Ident "[" Exp "]" "!==" Exp4 ;
   EVequal.            Exp1 ::= Ident "[" Exp "]" "==" Exp4 ;
-  EVatri.             Exp1 ::= Exp "[" Exp "]" "=" Exp4 ;
+  EVatri.             Exp1 ::= Ident "[" Ident "]" "=" Exp4 ;
   EAnotherArrayIndex. Exp ::= Ident "[" Exp "]" "=" Ident "[" Exp "]" ;
   EAssMatrix.         Exp ::= "let" Ident ":" Type "[][]" "=" "[" [Exp] "]" ;
   EAssMatrixOp.       Exp ::= "let" Ident ":" Type "[][]" "=" Exp ;
