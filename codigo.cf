@@ -1,8 +1,8 @@
   comment "//" ;
   comment "/*" "*/" ;
   
-  Prog. Program  ::= [Function] ;
-  Fun.  Function ::= "{" [Stm] "}" ;
+  Prog. Program  ::= [Decl] [Stm] [Function] ;
+  Fun.  Function ::= "function" Ident "(" [Stm] ")" "{" [Stm] "}" ;
   Dec.  Decl     ::= Type [Ident] ;
 
   terminator Function "" ;
@@ -14,22 +14,32 @@
   SExp.    Stm ::= Exp ";" ;
   SBlock.  Stm ::= "{" [Stm] "}" ;
   SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
-  SFor. Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
-  SIf.     Stm ::= "if" "(" Exp ")" Stm ;
+  SFor.    Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
+  SIf.     Stm ::= "if" "(" Exp ")" "{" [Stm] "}" ; 
+  SIfelse. Stm ::= "if" "(" Exp ")" "{" [Stm] "}" "else" "{" [Stm] "}" ;
   SReturn. Stm ::= "return" Exp  ";" ;
   SLabel.  Stm ::= Integer ":" ;
   SGoto.   Stm ::= "goto" Integer ";" ;
-  SLog.    Stm ::= "log" "(" Exp ")" ";" ; 
-  
-  
-  EAss.    Exp  ::= "let" Ident ":" Type "=" Exp ;
-  EPontMem.   Exp  ::= "let" Typont Ident  "=" "&" Exp ;
-  EPont.   Exp ::= "let" Typont Ident "=" Exp ;
-  EAssArray. Exp ::= "let" Ident ":" Type "[]" "=" "[" [Exp] "]";
-  EAssMatrix. Exp ::= "let" Ident ":" Type "[][]" "=" "[" [Exp] "]" ;
-  EAssMatrixOp. Exp ::= "let" Ident ":" Type "[][]" "=" Exp ;
-  ELt.     Exp1 ::= Exp2 "<" Exp2 ;
-  Equal.   Exp1 ::= Exp2 "==" Exp2 ;
+  SLog.    Stm ::= "log" "(" Exp ")" ";" ;
+
+  EAss.               Exp  ::= "let" Ident ":" Type "=" Exp ;
+  EIdent.             Exp ::= Ident ;
+  EAssSimpl.          Exp  ::= Ident "=" Exp ;
+  EConst.             Exp  ::= "const" Ident ":" Type "=" Exp ;
+  EPontMem.           Exp  ::= "let" Typont Ident  "=" "&" Exp ;
+  EPont.              Exp ::= "let" Typont Ident "=" Exp ;
+  EAssArray.          Exp ::= "let" Ident ":" Type "[]" "=" "[" [Exp] "]";
+  EAssArraySim.       Exp ::= Ident "[" Exp "]" "=" Exp ;
+  EAPositionInArray.  Exp ::= Ident "[" Integer "]" "=" Ident "[" Integer "]" ;
+  EMinor.             Exp1 ::= Ident "[" Exp "]" "!==" Exp4 ;
+  EVequal.            Exp1 ::= Ident "[" Exp "]" "==" Exp4 ;
+  EVatri.             Exp1 ::= Exp "[" Exp "]" "=" Exp4 ;
+  EAnotherArrayIndex. Exp ::= Ident "[" Exp "]" "=" Ident "[" Exp "]" ;
+  EAssMatrix.         Exp ::= "let" Ident ":" Type "[][]" "=" "[" [Exp] "]" ;
+  EAssMatrixOp.       Exp ::= "let" Ident ":" Type "[][]" "=" Exp ;
+  ELt.                Exp1 ::= Exp2 "<" Exp2 ;
+  Equal.              Exp1 ::= Exp2 "==" Exp2 ;
+  EDiff.              Exp1 ::= Exp2 "!==" Exp2 ;
   
  
   EAdd.    Exp2 ::= Exp2 "+" Exp3 ;
@@ -41,8 +51,9 @@
   EInt.    Exp4 ::= Integer ;
   EChar.   Exp4 ::= Char ;
   EDouble. Exp4 ::= Double ;
-  EIncr.   Exp ::= Ident "++" ";" ;
-  EDecr.   Exp ::= Ident "--" ";" ;
+  EVet.    Exp4 ::= Ident "[" Ident "]" ;
+  EIncr.   Exp ::= Exp "++" ";" ;
+  EDecr.   Exp ::= Exp "--" ";" ;
 
   EIncrWithoutemicolon.  Exp ::= Ident "++" ;
   EDecrWithoutemicolon.  Exp ::= Ident "--" ;
