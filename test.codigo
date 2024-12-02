@@ -1,4 +1,38 @@
-{
+/*
+Função
+*/
+
+for(let i:int = 0; i < 25; i++){
+  
+  if(x !== 10) {
+     log("KAKAKAKKA") ;
+     log("KAKAKAKKA") ;
+     if(x !== 10) {
+      log("KAKAKAKKA") ;
+    } 
+  } 
+  if(x !== 10) {
+     log("KAKAKAKKA") ;
+  } 
+  if(x !== 10) {
+     log("KAKAKAKKA") ;
+  } else {
+    d=0;
+  } 
+
+}
+
+
+
+let a:int = 10;
+let b:int = 20;
+
+a++;
+log(a);
+
+const d:int = 20;
+
+function Soma( k;) {
   let a:int = 10;
   let b:int = 20;
   let c:string = "aaaa";
@@ -31,5 +65,71 @@
 
   if(x == 10) {
      log("KAKAKAKKA") ;
-  }
+     log("KAKAKAKKA") ;
+  } 
 }
+
+
+
+
+/*
+Outra Função
+*/
+
+
+
+function M (let a: int = 3 ; c;){
+  let arrayInt: int[] = [1, 2, 3, 4];
+  let arratString: string[] = ["hello", "world"];
+
+  let matrixA: int[][] = [[1, 2], [3, 4]];
+  let matrixB: int[][] = [[1, 2], [3, 4]];
+
+  let matrixC: int[][] = matrixA + matrixB;
+ 
+  while(x !== "10") {
+     
+  }
+
+  for(let i:int = 0; i < 25; i++){
+
+  }
+
+  let a:int = soma(n);
+  soma(a, v);
+}
+
+
+function String (let i: int = 0; let c: int = 0;) {
+  let text: string[] = ["exemplo texto exemplo texto exemplo"];
+  let word: string[] = ["exemplo"];
+  let temp_word: string[]  = [""];
+  let j: int = 0;
+  word [j] = '\0';
+
+    while (text [i] !== '\0') {
+      if (text [i] == ' ') {
+        temp_word [j] = '\0';
+        j = 0; 
+
+        if (temp_word == word) {
+          count++ ;
+        } 
+      } else {
+        temp_word[j] = text[i];
+        j = j + 1;
+      }
+      i++;
+    }
+
+    //temp_word[j] = '\0'; 
+
+    if (temp_word == word) {
+      count++;
+    }
+
+    log(count);
+  }
+  
+
+  
