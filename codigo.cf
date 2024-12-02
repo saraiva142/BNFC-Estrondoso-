@@ -10,17 +10,18 @@
   separator  Decl "," ;
   separator  nonempty Ident "," ;
   
-  SDecl.   Stm ::= Decl ";"  ;
-  SExp.    Stm ::= Exp ";" ;
-  SBlock.  Stm ::= "{" [Stm] "}" ;
-  SWhile.  Stm ::= "while" "(" Exp ")" Stm ;
-  SFor.    Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
-  SIf.     Stm ::= "if" "(" Exp ")" "{" [Stm] "}" ; 
-  SIfelse. Stm ::= "if" "(" Exp ")" "{" [Stm] "}" "else" "{" [Stm] "}" ;
-  SReturn. Stm ::= "return" Exp  ";" ;
-  SLabel.  Stm ::= Integer ":" ;
-  SGoto.   Stm ::= "goto" Integer ";" ;
-  SLog.    Stm ::= "log" "(" Exp ")" ";" ;
+  SDecl.       Stm ::= Decl ";"  ;
+  SExp.        Stm ::= Exp ";" ;
+  SBlock.      Stm ::= "{" [Stm] "}" ;
+  SWhile.      Stm ::= "while" "(" Exp ")" Stm ;
+  SFor.        Stm ::= "for" "(" Exp ";" Exp ";" Exp ")" Stm ;
+  SIf.         Stm ::= "if" "(" Exp ")" "{" [Stm] "}" ; 
+  SIfelse.     Stm ::= "if" "(" Exp ")" "{" [Stm] "}" "else" "{" [Stm] "}" ;
+  SReturn.     Stm ::= "return" Exp  ";" ;
+  SLabel.      Stm ::= Integer ":" ;
+  SGoto.       Stm ::= "goto" Integer ";" ;
+  SLog.        Stm ::= "log" "(" Exp ")" ";" ;
+  SInterface.  Stm ::= "interface" Ident "{" [Exp] "}" ";" ;
 
   EAss.               Exp  ::= "let" Ident ":" Type "=" Exp ;
   EIdent.             Exp ::= Ident ;
@@ -37,11 +38,13 @@
   EAnotherArrayIndex. Exp ::= Ident "[" Exp "]" "=" Ident "[" Exp "]" ;
   EAssMatrix.         Exp ::= "let" Ident ":" Type "[][]" "=" "[" [Exp] "]" ;
   EAssMatrixOp.       Exp ::= "let" Ident ":" Type "[][]" "=" Exp ;
+  EAssInterface.      Exp ::= "let" Ident ":" Type "=" "{" [Exp] "}" ;
+  EkeyDecl.           Exp ::= Ident ":" Type ;
+  EkeyDeclObj.        Exp ::= Ident ":" Exp4 ;
   ELt.                Exp1 ::= Exp2 "<" Exp2 ;
   Equal.              Exp1 ::= Exp2 "==" Exp2 ;
   EDiff.              Exp1 ::= Exp2 "!==" Exp2 ;
-  
- 
+
   EAdd.    Exp2 ::= Exp2 "+" Exp3 ;
   ESub.    Exp2 ::= Exp2 "-" Exp3 ;
   EMul.    Exp3 ::= Exp3 "*" Exp4 ;
@@ -64,6 +67,6 @@
 
   ExpList. Exp ::= "[" [Exp] "]" ;
 
-  rules Type ::= Type "[" Integer "]" | "int" | "[" String "]" | "string" | "float" | "double" | "char" | Ident ;
+  rules Type ::= Type "[" Integer "]" | "int" | "[" String "]" | "string" | "float" | "double" | "char" | "interface" | Ident ;
 
-  TPonterio.  Typont ::= "@" ; 
+  TPonterio.  Typont ::= "@" ;
