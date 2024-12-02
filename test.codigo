@@ -103,12 +103,12 @@ function M (let a: int = 3 ; c;){
 function String (let i: int = 0; let c: int = 0;) {
   let text: string[] = ["exemplo texto exemplo texto exemplo"];
   let word: string[] = ["exemplo"];
-  let temp_word: string[]  = [""];
+  let temp_word: string[] = [""];
   let j: int = 0;
-  word [j] = '\0';
+  word[j] = '\0';
 
-    while (text [i] !== '\0') {
-      if (text [i] == ' ') {
+    while (text[i] !== '\0') {
+      if (text[i] == ' ') {
         temp_word [j] = '\0';
         j = 0; 
 
@@ -129,6 +129,20 @@ function String (let i: int = 0; let c: int = 0;) {
     }
 
     log(count);
+
+    interface Person {
+      name: string,
+      email: string,
+      age: int,
+    };
+
+    let person: Person = {
+      name: "John Doe",
+      email: "johndoe@gmail.com",
+      age: 22
+    };
+
+
   }
   
 
