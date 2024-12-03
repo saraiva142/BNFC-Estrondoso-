@@ -1,149 +1,91 @@
-/*
-Função
-*/
-
-for(let i:int = 0; i < 25; i++){
-  
-  if(x !== 10) {
-     log("KAKAKAKKA") ;
-     log("KAKAKAKKA") ;
-     if(x !== 10) {
-      log("KAKAKAKKA") ;
-    } 
-  } 
-  if(x !== 10) {
-     log("KAKAKAKKA") ;
-  } 
-  if(x !== 10) {
-     log("KAKAKAKKA") ;
-  } else {
-    d=0;
-  } 
-
-}
-
-
-
-let a:int = 10;
-let b:int = 20;
-
-a++;
-log(a);
-
-const d:int = 20;
-
-function Soma( k;) {
-  let a:int = 10;
-  let b:int = 20;
-  let c:string = "aaaa";
-  let testchar:char = "a";
-  let @pt1 = 2;
-  let @pt = &b;
-
-
-  2 :
-
-  goto 11 ;
- 
-  let d: int = 20 + a * b - c;
-
-  let arrayInt: int[] = [1, 2, 3, 4];
-  let arratString: string[] = ["hello", "world"];
-
-  let matrixA: int[][] = [[1, 2], [3, 4]];
-  let matrixB: int[][] = [[1, 2], [3, 4]];
-
-  let matrixC: int[][] = matrixA + matrixB;
- 
-  while(x < 10) {
-     
-  }
-
-  for(let i:int = 0; i < 25; i++){
-
-  }
-
-  if(x == 10) {
-     log("KAKAKAKKA") ;
-     log("KAKAKAKKA") ;
-  } 
-}
-
-
-
-
-/*
-Outra Função
-*/
-
-
-
-function M (let a: int = 3 ; c;){
-  let arrayInt: int[] = [1, 2, 3, 4];
-  let arratString: string[] = ["hello", "world"];
-
-  let matrixA: int[][] = [[1, 2], [3, 4]];
-  let matrixB: int[][] = [[1, 2], [3, 4]];
-
-  let matrixC: int[][] = matrixA + matrixB;
- 
-  while(x !== "10") {
-     
-  }
-
-  for(let i:int = 0; i < 25; i++){
-
-  }
-
-  let a:int = soma(n);
-  soma(a, v);
-}
-
-
-function String (let i: int = 0; let c: int = 0;) {
-  let text: string[] = ["exemplo texto exemplo texto exemplo"];
-  let word: string[] = ["exemplo"];
-  let temp_word: string[] = [""];
-  let j: int = 0;
-  word[j] = '\0';
-
+function QtdString (let i: int = 0; let j: int = 0; let count: int = 0;) {
+    let text: string[] = ["exemplo texto exemplo texto exemplo"];
+    let word: string[] = ["exemplo"];
+    let temp_word: string[] = [""];
+    
+    // Contagem das ocorrências da palavra
     while (text[i] !== '\0') {
-      if (text[i] == ' ') {
-        temp_word [j] = '\0';
-        j = 0; 
+        if (text[i] == ' ') {
+            temp_word[j] = '\0';
+            j = 0;
 
-        if (temp_word == word) {
-          count++ ;
-        } 
-      } else {
-        temp_word[j] = text[i];
-        j = j + 1;
-      }
-      i++;
+            // Verifica se encontrou a palavra
+            if (temp_word == word) {
+                count++ ;
+            }
+        } else {
+            temp_word[j] = text[i];
+            j = j + 1;
+        }
+        i++;
     }
 
-    //temp_word[j] = '\0'; 
-
+    // Checa a última palavra (se não terminar com espaço)
     if (temp_word == word) {
-      count++;
+        count++;
     }
 
     log(count);
+}
 
-    interface Person {
-      name: string,
-      email: string,
-      age: int,
-    };
+function TrocarString (let i: int = 0; let j: int = 0; let new_text: string[] = [""];) {
+    let text: string[] = ["exemplo texto exemplo texto exemplo"];
+    let word: string[] = ["exemplo"];
+    let new_word: string[] = ["texto"];
+    let temp_word: string[] = [""];
+    let k: int = 0;
 
-    let person: Person = {
-      name: "John Doe",
-      email: "johndoe@gmail.com",
-      age: 22
-    };
+    // Substituição da palavra no texto
+    while (text[i] !== '\0') {
+        if (text[i] == ' ') {
+            temp_word[j] = '\0';
+            j = 0;
+
+            // Substitui a palavra se encontrada
+            if (temp_word == word) {
+                // Adiciona a nova palavra ao novo texto
+                new_text[k] = new_word;
+            } else {
+                // Adiciona a palavra não modificada
+                new_text[k] = temp_word;
+            }
+            k++;
+        } else {
+            temp_word[j] = text[i];
+            j = j + 1;
+        }
+        i++;
+    }
+
+    // Verifica a última palavra
+    if (temp_word == word) {
+        new_text[k] = new_word;
+    } else {
+        new_text[k] = temp_word;
+    }
+
+    log(new_text);
+}
+
+function SomaMatriz (let i: int = 0; let j: int = 0; let rows: int = 2; let cols: int = 2;) {
+    let matrix1: int[][] = [[1, 2], [3, 4]];
+    let matrix2: int[][] = [[5, 6], [7, 8]];
+    let result: int[][] = [[0, 0], [0, 0]];
+
+    // Soma as matrizes
+    for (i = 0; i < rows; i++) {
+        for (j = 0; j < cols; j++) {
+            result = matrix1 + matrix2;
+        }
+    }
+
+    // Exibe a matriz resultado
+    log(result);
+}
 
 
-  }
-  
-
-  
+function main() {
+    QtdString();   
+    TrocarString();        
+    SomaMatriz();
+}
