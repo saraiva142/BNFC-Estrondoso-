@@ -217,7 +217,34 @@ void visitStm(Stm p)
     break;
   case is_SLog:
     /* Code for SLog Goes Here */
-    visitExp(p->u.slog_.exp_);
+    printf("Visitando comando LOG.\n");
+
+    printf("Validando o argumento do LOG...\n");
+    switch (p->u.slog_.exp_->kind)
+    {
+    case is_EIdent:
+        printf("LOG: Variável detectada.\n");
+        visitIdent(p->u.slog_.exp_->u.eident_.ident_);
+        printf("LOG válido.\n");
+        break;
+
+    case is_EStr:
+        printf("LOG: String detectada.\n");
+        visitString(p->u.slog_.exp_->u.estr_.string_);
+        printf("LOG válido.\n");
+        break;
+
+    case is_Call:
+        printf("LOG: Função detectada.\n");
+        visitIdent(p->u.slog_.exp_->u.call_.ident_);
+        visitListExp(p->u.slog_.exp_->u.call_.listexp_);
+        printf("LOG válido.\n");
+        break;
+    default:
+        printf("Erro: Argumento inválido para o comando LOG.\n");
+        break;
+    }
+    /*visitExp(p->u.slog_.exp_);*/
     break;
   case is_SInterface:
     /* Code for SInterface Goes Here */
