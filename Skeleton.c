@@ -124,9 +124,47 @@ void visitStm(Stm p)
     break;
   case is_SFor:
     /* Code for SFor Goes Here */
+    printf("Verificando o FOR \n");
+
+    printf("Verificando comando de inicialização do FOR\n");
+    if (p->u.sfor_.exp_1->kind != is_EAss &&  
+        p->u.sfor_.exp_1->kind != is_EAssSimpl) 
+    {
+        printf("Erro: Inicialização do 'for' inválida. Deve ser uma expressão de atribuição.\n");
+        break;
+    }
+    else {
+      printf("Inicialização do for válida\n");
+    }
     visitExp(p->u.sfor_.exp_1);
+
+    printf("Verificando comando de condição do FOR\n");
+    if (p->u.sfor_.exp_2->kind != is_ELt &&   
+        p->u.sfor_.exp_2->kind != is_Equal &&  
+        p->u.sfor_.exp_2->kind != is_EDiff )
+      {
+        printf("Erro: Condição do 'for' inválida. Deve ser uma expressão de comparação.\n");
+        break;
+    }
+    else {
+      printf("Condição do for válida\n");
+    }
     visitExp(p->u.sfor_.exp_2);
+
+    printf("Verificando comando de atualização do FOR\n");
+    if (p->u.sfor_.exp_3->kind != is_EIncr &&
+        p->u.sfor_.exp_3->kind != is_EAssSimpl &&
+        p->u.sfor_.exp_3->kind != is_EIncrWithoutemicolon) 
+    {
+        printf("Erro: Atualização do 'for' inválida. Deve ser uma expressão de incremento, decremento ou atribuição.\n");
+        break;
+    }
+    else {
+      printf("Atualização do for válida\n");
+    }
     visitExp(p->u.sfor_.exp_3);
+
+    printf("Executando o bloco do FOR\n");
     visitStm(p->u.sfor_.stm_);
     break;
   case is_SIf:
@@ -150,8 +188,19 @@ void visitStm(Stm p)
     break;
   case is_SIfelse:
     /* Code for SIfelse Goes Here */
-    visitExp(p->u.sifelse_.exp_);
+    printf("Visitando comando IF-ELSE.\n");
+
+    if (p->u.sifelse_.exp_->kind != is_ELt &&   
+        p->u.sifelse_.exp_->kind != is_Equal &&  
+        p->u.sifelse_.exp_->kind != is_EDiff )
+    {
+      printf("Erro: Condição do 'if' inválida. Deve ser uma expressão de comparação.\n");
+      break;
+    }
+    printf("Condição válida. Executando o bloco do IF.\n");
+    /*visitExp(p->u.sifelse_.exp_);*/
     visitListStm(p->u.sifelse_.liststm_1);
+    printf("Executando o bloco do ELSE.\n");
     visitListStm(p->u.sifelse_.liststm_2);
     break;
   case is_SReturn:
