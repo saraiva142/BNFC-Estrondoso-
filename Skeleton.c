@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "Skeleton.h"
 
@@ -21,6 +22,9 @@ Dps entrar nos cases
 */
 
 #define MAX_LABELS 1000
+#define MAX_SYMBOLS 1000
+#define MAX_FUNCTIONS 1000
+#define MAX_PARAMS 100
 
 typedef struct {
     int labels[MAX_LABELS]; 
@@ -65,16 +69,235 @@ void printLabelTable() {
     }
 }
 
+/* TABELA DE SÍMBOLOS PARA VARIÁVEIS: */
+
+typedef struct {
+    Ident ident;
+    Type type; 
+} SymbolEntry;
+
+typedef struct {
+    Ident idents[MAX_SYMBOLS]; 
+    Type types[MAX_SYMBOLS];   
+    int count;
+} SymbolTable;
+
+SymbolTable symbolTable;
+
+void initSymbolTable() {
+    symbolTable.count = 0;
+}
+
+int symbolExists(Ident ident) {
+    int i;
+    for (i = 0; i < symbolTable.count; i++) {
+        if (strcmp(symbolTable.idents[i], ident) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+Type getSymbolType(Ident ident) {
+    int i;
+    for (i = 0; i < symbolTable.count; i++) {
+        if (strcmp(symbolTable.idents[i], ident) == 0) {
+            return symbolTable.types[i];
+        }
+    }
+    return NULL; 
+}
+
+int addSymbol(Ident ident, Type type) {
+    if (symbolExists(ident)) {
+        return 0; 
+    }
+    symbolTable.idents[symbolTable.count] = ident;
+    symbolTable.types[symbolTable.count] = type;
+    symbolTable.count++;
+    return 1;
+}
+
+/* TABELA DE FUNÇÕES:  
+   Vamos armazenar nome da função*/
+
+typedef struct {
+    Ident fname;
+} FunctionEntry;
+
+typedef struct {
+    FunctionEntry functions[MAX_FUNCTIONS];
+    int count;
+} FunctionTable;
+
+FunctionTable functionTable;
+
+void initFunctionTable() {
+    functionTable.count = 0;
+}
+
+int functionExists(Ident fname) {
+    int i;
+    for (i = 0; i < functionTable.count; i++) {
+        if (strcmp(functionTable.functions[i].fname, fname) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+FunctionEntry* getFunctionEntry(Ident fname) {
+    int i;
+    for (i = 0; i < functionTable.count; i++) {
+        if (strcmp(functionTable.functions[i].fname, fname) == 0) {
+            return &functionTable.functions[i];
+        }
+    }
+    return NULL;
+}
+
+int addFunction(Ident fname) {
+    if (functionExists(fname)) {
+        return 0; 
+    }
+    functionTable.functions[functionTable.count].fname = fname;
+    functionTable.count++;
+    return 1;
+}
+
+void printFunctionTable() {
+    printf("\nTabela de Funções:\n");
+    int i;
+    for (i = 0; i < functionTable.count; i++) {
+        printf("Função '%s'\n", functionTable.functions[i].fname);
+    }
+    if (functionTable.count == 0) {
+        printf("Nenhuma função definida.\n");
+    }
+}
+
+static const char* getTypeString(Type t) {
+    if (!t) return "tipo_desconhecido";
+    switch(t->kind) {
+        case is_Type_int: return "int";
+        case is_Type_string: return "string";
+        case is_Type_float: return "float";
+        case is_Type_double: return "double";
+        case is_Type_char: return "char";
+        case is_Type_interface: return "interface";
+        case is_Type1:
+        case is_Type2:
+        case is_TypeIdent:
+          return "complex_type";
+        default:
+          return "tipo_desconhecido";
+    }
+}
+
+static const char* inferExpType(Exp e) {
+    if (!e) return "tipo_desconhecido";
+    switch (e->kind) {
+        case is_EIdent: {
+            Type varType = getSymbolType(e->u.eident_.ident_);
+            if (varType) return getTypeString(varType);
+            else return "tipo_desconhecido";
+        }
+        case is_EInt:
+            return "int";
+        case is_EStr:
+            return "string";
+        case is_EDouble:
+            return "double";
+        case is_EChar:
+            return "char";
+        default:
+            return "tipo_desconhecido";
+    }
+}
+
+static void checkListExpTypes(ListExp listexp, const char* expectedType) {
+    ListExp le = listexp;
+    while (le != NULL) {
+        const char* elemType = inferExpType(le->exp_);
+        if (strcmp(elemType, "tipo_desconhecido") != 0 && strcmp(elemType, expectedType) != 0) {
+            printf("Aviso: Tipo do elemento '%s' não corresponde ao tipo esperado '%s' na atribuição de array/matriz.\n", elemType, expectedType);
+        }
+        le = le->listexp_;
+    }
+}
+
+/* Verificação de tipos em expressões binárias.  
+   Aqui assumiremos que EAdd, ESub, EMul, ELt, Equal, EDiff são binárias. 
+   Vamos verificar se os operandos têm tipos compatíveis. 
+   
+   Regra simples:
+   - Para EAdd, ESub, EMul: ambos devem ser numéricos (int, float, double). Caso contrário, aviso.
+   - Para ELt, Equal, EDiff: vamos assumir que só faz sentido comparar tipos compatíveis. Se forem diferentes, aviso.
+*/
+
+static int isNumericType(const char* t) {
+    return (strcmp(t, "int")==0 || strcmp(t, "float")==0 || strcmp(t, "double")==0);
+}
+
+static void checkBinaryExp(Exp left, Exp right, const char* opName) {
+    const char* leftType = inferExpType(left);
+    const char* rightType = inferExpType(right);
+
+    
+    if (strcmp(leftType, "tipo_desconhecido") == 0 || strcmp(rightType, "tipo_desconhecido") == 0) {
+        printf("Aviso: Não foi possível saber o tipo de um dos operandos em '%s'.\n", opName);
+        return;
+    }
+
+    if (strcmp(opName, "EAdd")==0 || strcmp(opName, "ESub")==0 || strcmp(opName, "EMul")==0) {
+        
+        if (!isNumericType(leftType) || !isNumericType(rightType)) {
+            printf("Erro: Operação '%s' requer operandos numéricos. Encontrados '%s' e '%s'.\n", opName, leftType, rightType);
+        } else {
+            
+            if (strcmp(leftType, rightType)!=0) {
+                printf("Erro: Operação '%s' entre tipos diferentes '%s' e '%s'.\n", opName, leftType, rightType);
+            }
+        }
+    }
+    else if (strcmp(opName, "ELt")==0 || strcmp(opName, "Equal")==0 || strcmp(opName, "EDiff")==0) {
+        if (strcmp(leftType, rightType) != 0) {
+            printf("Erro: Comparação '%s' entre tipos distintos '%s' e '%s'.\n", opName, leftType, rightType);
+        }
+    }
+}
+
+void printSymbolTable() {
+    printf("\nTabela de Símbolos:\n");
+    int i;
+    for (i = 0; i < symbolTable.count; i++) {
+        printf("|Variável: '%s' | Tipo: '%s'|\n", symbolTable.idents[i], getTypeString(symbolTable.types[i]));
+    }
+    if (symbolTable.count == 0) {
+        printf("Nenhuma variável definida.\n");
+    }
+}
+
 void visitProgram(Program p)
 {
   switch(p->kind)
   {
   case is_Prog:
-    /* Code for Prog Goes Here */
     printf("Começando a análise semântica\n");
+
+    initLabelTable();
+    initSymbolTable();
+    initFunctionTable();
+
     visitListDecl(p->u.prog_.listdecl_);
     visitListStm(p->u.prog_.liststm_);
     visitListFunction(p->u.prog_.listfunction_);
+
+    /* Imprimindo as tabelas */
+    printLabelTable();
+    printSymbolTable();
+    printFunctionTable();
+
     break;
 
   default:
@@ -88,10 +311,20 @@ void visitFunction(Function p)
   switch(p->kind)
   {
   case is_Fun:
-    /* Code for Fun Goes Here */
-    visitIdent(p->u.fun_.ident_);
-    visitListStm(p->u.fun_.liststm_1);
-    visitListStm(p->u.fun_.liststm_2);
+    {
+      Ident fname = p->u.fun_.ident_;
+      visitIdent(fname);
+
+      /* Adiciona a função na tabela de funções */
+      if (!addFunction(fname)) {
+          printf("Erro: Função '%s' já declarada.\n", fname);
+      } else {
+          printf("Função '%s' declarada.\n", fname);
+      }
+
+      visitListStm(p->u.fun_.liststm_1);
+      visitListStm(p->u.fun_.liststm_2);
+    }
     break;
 
   default:
@@ -105,9 +338,20 @@ void visitDecl(Decl p)
   switch(p->kind)
   {
   case is_Dec:
-    /* Code for Dec Goes Here */
-    visitType(p->u.dec_.type_);
-    visitListIdent(p->u.dec_.listident_);
+    {
+      Type declType = p->u.dec_.type_;
+      visitType(p->u.dec_.type_);
+      ListIdent lid = p->u.dec_.listident_;
+      while (lid != 0) {
+          visitIdent(lid->ident_);
+          if (!addSymbol(lid->ident_, declType)) {
+              printf("Erro: Variável '%s' já declarada.\n", lid->ident_);
+          } else {
+              printf("Variável '%s' adicionada com sucesso com tipo '%s'.\n", lid->ident_, getTypeString(declType));
+          }
+          lid = lid->listident_;
+      }
+    }
     break;
 
   default:
@@ -120,7 +364,6 @@ void visitListFunction(ListFunction listfunction)
 {
   while(listfunction  != 0)
   {
-    /* Code For ListFunction Goes Here */
     visitFunction(listfunction->function_);
     listfunction = listfunction->listfunction_;
   }
@@ -130,7 +373,6 @@ void visitListStm(ListStm liststm)
 {
   while(liststm  != 0)
   {
-    /* Code For ListStm Goes Here */
     visitStm(liststm->stm_);
     liststm = liststm->liststm_;
   }
@@ -140,7 +382,6 @@ void visitListDecl(ListDecl listdecl)
 {
   while(listdecl  != 0)
   {
-    /* Code For ListDecl Goes Here */
     visitDecl(listdecl->decl_);
     listdecl = listdecl->listdecl_;
   }
@@ -150,7 +391,6 @@ void visitListIdent(ListIdent listident)
 {
   while(listident  != 0)
   {
-    /* Code For ListIdent Goes Here */
     visitIdent(listident->ident_);
     listident = listident->listident_;
   }
@@ -161,31 +401,26 @@ void visitStm(Stm p)
   switch(p->kind)
   {
   case is_SDecl:
-    /* Code for SDecl Goes Here */
     visitDecl(p->u.sdecl_.decl_);
     break;
   case is_SExp:
-    /* Code for SExp Goes Here */
     visitExp(p->u.sexp_.exp_);
     break;
   case is_SBlock:
-    /* Code for SBlock Goes Here */
     visitListStm(p->u.sblock_.liststm_);
     break;
   case is_SWhile:
-    /* Code for SWhile Goes Here */
     visitExp(p->u.swhile_.exp_);
     visitStm(p->u.swhile_.stm_);
     break;
   case is_SFor:
-    /* Code for SFor Goes Here */
     printf("Verificando o FOR \n");
 
     printf("Verificando comando de inicialização do FOR\n");
     if (p->u.sfor_.exp_1->kind != is_EAss &&  
         p->u.sfor_.exp_1->kind != is_EAssSimpl) 
     {
-        printf("Erro: Inicialização do 'for' inválida. Deve ser uma expressão de atribuição.\n");
+        printf("Erro: Inicialização do 'for' inválida.\n");
         break;
     }
     else {
@@ -197,8 +432,8 @@ void visitStm(Stm p)
     if (p->u.sfor_.exp_2->kind != is_ELt &&   
         p->u.sfor_.exp_2->kind != is_Equal &&  
         p->u.sfor_.exp_2->kind != is_EDiff )
-      {
-        printf("Erro: Condição do 'for' inválida. Deve ser uma expressão de comparação.\n");
+    {
+        printf("Erro: Condição do 'for' inválida.\n");
         break;
     }
     else {
@@ -211,7 +446,7 @@ void visitStm(Stm p)
         p->u.sfor_.exp_3->kind != is_EAssSimpl &&
         p->u.sfor_.exp_3->kind != is_EIncrWithoutemicolon) 
     {
-        printf("Erro: Atualização do 'for' inválida. Deve ser uma expressão de incremento, decremento ou atribuição.\n");
+        printf("Erro: Atualização do 'for' inválida.\n");
         break;
     }
     else {
@@ -223,74 +458,67 @@ void visitStm(Stm p)
     visitStm(p->u.sfor_.stm_);
     break;
   case is_SIf:
-    /* Code for SIf Goes Here */
     printf("Visitando comando IF.\n");
 
     visitExp(p->u.sif_.exp_);
 
-    
     if (p->u.sif_.exp_->kind != is_ELt &&   
         p->u.sif_.exp_->kind != is_Equal &&  
         p->u.sif_.exp_->kind != is_EDiff )
     {
-        printf("Erro: Condição do 'if' inválida. Deve ser uma expressão de comparação.\n");
+        printf("Erro: Condição do 'if' inválida.\n");
         break;
     }
 
     printf("Condição válida. Executando o bloco do IF.\n");
-    
     visitListStm(p->u.sif_.liststm_);
     break;
   case is_SIfelse:
-    /* Code for SIfelse Goes Here */
     printf("Visitando comando IF-ELSE.\n");
 
     if (p->u.sifelse_.exp_->kind != is_ELt &&   
         p->u.sifelse_.exp_->kind != is_Equal &&  
         p->u.sifelse_.exp_->kind != is_EDiff )
     {
-      printf("Erro: Condição do 'if' inválida. Deve ser uma expressão de comparação.\n");
+      printf("Erro: Condição do 'if' inválida.\n");
       break;
     }
     printf("Condição válida. Executando o bloco do IF.\n");
-    /*visitExp(p->u.sifelse_.exp_);*/
     visitListStm(p->u.sifelse_.liststm_1);
     printf("Executando o bloco do ELSE.\n");
     visitListStm(p->u.sifelse_.liststm_2);
     break;
   case is_SReturn:
-    /* Code for SReturn Goes Here */
     visitExp(p->u.sreturn_.exp_);
     break;
   case is_SLabel:
-    /* Code for SLabel Goes Here */
-    printf("Visitando comando LABEL.\n");
+    {
+      printf("Visitando comando LABEL.\n");
+      int label = p->u.slabel_.integer_ ;
 
-    /*Obtém o número da label*/
-    int label = p->u.slabel_.integer_ ;
-
-    if (!addLabel(label)) {
-        printf("Erro: Label %d já foi definida.\n", label);
-    } else {
-        printf("Label %d adicionada com sucesso.\n", label);
+      if (!addLabel(label)) {
+          printf("Erro: Label %d já foi definida.\n", label);
+      } else {
+          printf("Label %d adicionada com sucesso.\n", label);
+      }
+      visitInteger(p->u.slabel_.integer_);
     }
-    visitInteger(p->u.slabel_.integer_);
     break;
   case is_SGoto:
-    /* Code for SGoto Goes Here */
-    printf("Visitando comando GOTO.\n");
+    {
+      printf("Visitando comando GOTO.\n");
 
-    int gotoLabel = p->u.sgoto_.integer_;
+      int gotoLabel = p->u.sgoto_.integer_;
 
-    if (!labelExists(gotoLabel)) {
-        printf("Erro: Label %d não definida antes do GOTO.\n", gotoLabel);
-    } else {
-        printf("GOTO para label %d validado com sucesso.\n", gotoLabel);
+      if (!labelExists(gotoLabel)) {
+          printf("Erro: Label %d não definida antes do GOTO.\n", gotoLabel);
+      } else {
+          printf("GOTO para label %d validado com sucesso.\n", gotoLabel);
+      }
+      visitInteger(p->u.sgoto_.integer_);
     }
-    visitInteger(p->u.sgoto_.integer_);
     break;
   case is_SLog:
-    /* Code for SLog Goes Here */
     printf("Visitando comando LOG.\n");
 
     printf("Validando o argumento do LOG...\n");
@@ -298,31 +526,33 @@ void visitStm(Stm p)
     {
     case is_EIdent:
         printf("LOG: Variável detectada.\n");
-        /*Vamos ter q puxar a tabela aqui dps*/
+        if (!symbolExists(p->u.slog_.exp_->u.eident_.ident_)) {
+            printf("Erro: Variável '%s' não foi declarada antes do uso.\n", p->u.slog_.exp_->u.eident_.ident_);
+        } else {
+            printf("LOG válido.\n");
+        }
         visitIdent(p->u.slog_.exp_->u.eident_.ident_);
-        printf("LOG válido.\n");
-      break;
+        break;
 
     case is_EStr:
         printf("LOG: String detectada.\n");
         visitString(p->u.slog_.exp_->u.estr_.string_);
         printf("LOG válido.\n");
-      break;
+        break;
 
     case is_Call:
         printf("LOG: Função detectada.\n");
         visitIdent(p->u.slog_.exp_->u.call_.ident_);
         visitListExp(p->u.slog_.exp_->u.call_.listexp_);
         printf("LOG válido.\n");
-      break;
+        break;
+
     default:
         printf("Erro: Argumento inválido para o comando LOG.\n");
-      break;
+        break;
     }
-    /*visitExp(p->u.slog_.exp_);*/
     break;
   case is_SInterface:
-    /* Code for SInterface Goes Here */
     visitIdent(p->u.sinterface_.ident_);
     visitListExp(p->u.sinterface_.listexp_);
     break;
@@ -338,189 +568,332 @@ void visitExp(Exp p)
   switch(p->kind)
   {
   case is_EAss:
-    /* Code for EAss Goes Here */
-    visitIdent(p->u.eass_.ident_);
-    visitType(p->u.eass_.type_);
-    visitExp(p->u.eass_.exp_);
+    {
+      Ident varName = p->u.eass_.ident_;
+      Type varType = p->u.eass_.type_;
+      const char* rightType = inferExpType(p->u.eass_.exp_);
+      visitIdent(varName);
+      visitType(varType);
+      visitExp(p->u.eass_.exp_);
+
+      if (symbolExists(varName)) {
+          printf("Erro: Variável '%s' já declarada anteriormente.\n", varName);
+      } else {
+          addSymbol(varName, varType);
+          printf("Variável '%s' declarada com tipo '%s'.\n", varName, getTypeString(varType));
+      }
+
+      if (strcmp(getTypeString(varType), rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
+          printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'.\n", rightType, getTypeString(varType));
+      }
+    }
     break;
   case is_EIdent:
-    /* Code for EIdent Goes Here */
-    visitIdent(p->u.eident_.ident_);
+    {
+      Ident varName = p->u.eident_.ident_;
+      visitIdent(varName);
+      if (!symbolExists(varName)) {
+          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+      }
+    }
     break;
   case is_EAssSimpl:
-    /* Code for EAssSimpl Goes Here */
-    visitIdent(p->u.easssimpl_.ident_);
-    visitExp(p->u.easssimpl_.exp_);
+    {
+      Ident varName = p->u.easssimpl_.ident_; 
+      const char* rightType = inferExpType(p->u.easssimpl_.exp_); 
+
+      printf("Visitando atribuição simples: '%s'.\n", varName);
+
+      visitIdent(varName);
+      visitExp(p->u.easssimpl_.exp_);
+
+      if (!symbolExists(varName)) {
+          printf("Erro: Variável '%s' não foi declarada antes da atribuição.\n", varName);
+      } else {
+          Type declType = getSymbolType(varName);
+
+          if (declType) {
+              const char* leftType = getTypeString(declType); 
+              printf("Variável '%s' tem tipo '%s' - Então OK.\n", varName, leftType);
+
+              if (strcmp(leftType, rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
+                  printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'.\n", rightType, leftType);
+              }
+          } else {
+              printf("Erro: Não foi possível determinar o tipo da variável '%s'.\n", varName);
+          }
+      }
+
+      if (strcmp(rightType, "tipo_desconhecido") == 0) {
+          printf("Aviso: Não foi possível determinar o tipo da expressão no lado direito da atribuição.\n");
+      }
+    }
     break;
   case is_EConst:
-    /* Code for EConst Goes Here */
     visitIdent(p->u.econst_.ident_);
     visitType(p->u.econst_.type_);
     visitExp(p->u.econst_.exp_);
     break;
   case is_EPontMem:
-    /* Code for EPontMem Goes Here */
     visitTypont(p->u.epontmem_.typont_);
     visitIdent(p->u.epontmem_.ident_);
     visitExp(p->u.epontmem_.exp_);
     break;
   case is_EPont:
-    /* Code for EPont Goes Here */
     visitTypont(p->u.epont_.typont_);
     visitIdent(p->u.epont_.ident_);
     visitExp(p->u.epont_.exp_);
     break;
   case is_EAssArray:
-    /* Code for EAssArray Goes Here */
-    visitIdent(p->u.eassarray_.ident_);
-    visitType(p->u.eassarray_.type_);
-    visitListExp(p->u.eassarray_.listexp_);
+    {
+      Ident varName = p->u.eassarray_.ident_;
+      Type varType = p->u.eassarray_.type_;
+      visitIdent(varName);
+      visitType(varType);
+      visitListExp(p->u.eassarray_.listexp_);
+
+      if (symbolExists(varName)) {
+          printf("Erro: Variável '%s' já declarada anteriormente.\n", varName);
+      } else {
+          if (!addSymbol(varName, varType)) {
+              printf("Erro ao adicionar variável '%s'.\n", varName);
+          } else {
+              printf("Variável '%s' declarada com tipo '%s' (array).\n", varName, getTypeString(varType));
+          }
+      }
+      checkListExpTypes(p->u.eassarray_.listexp_, getTypeString(varType));
+    }
     break;
   case is_EAssArraySim:
-    /* Code for EAssArraySim Goes Here */
-    visitIdent(p->u.eassarraysim_.ident_);
-    visitExp(p->u.eassarraysim_.exp_1);
-    visitExp(p->u.eassarraysim_.exp_2);
+    {
+      Ident varName = p->u.eassarraysim_.ident_;
+      visitIdent(varName);
+      visitExp(p->u.eassarraysim_.exp_1);
+      visitExp(p->u.eassarraysim_.exp_2);
+
+      if (!symbolExists(varName)) {
+          printf("Erro: Variável (array) '%s' não foi declarada antes do uso.\n", varName);
+      } else {
+          Type declType = getSymbolType(varName);
+          if (declType) {
+              const char* leftType = getTypeString(declType);
+              const char* rightType = inferExpType(p->u.eassarraysim_.exp_2);
+              if (strcmp(leftType, rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
+                  printf("Aviso: Tipo do elemento atribuído '%s' não coincide com o tipo da variável '%s' (array).\n", rightType, leftType);
+              }
+          }
+      }
+    }
     break;
   case is_EAPositionInArray:
-    /* Code for EAPositionInArray Goes Here */
     visitIdent(p->u.eapositioninarray_.ident_1);
     visitInteger(p->u.eapositioninarray_.integer_1);
     visitIdent(p->u.eapositioninarray_.ident_2);
     visitInteger(p->u.eapositioninarray_.integer_2);
     break;
   case is_EAnotherArrayIndex:
-    /* Code for EAnotherArrayIndex Goes Here */
     visitIdent(p->u.eanotherarrayindex_.ident_1);
     visitExp(p->u.eanotherarrayindex_.exp_1);
     visitIdent(p->u.eanotherarrayindex_.ident_2);
     visitExp(p->u.eanotherarrayindex_.exp_2);
     break;
   case is_EAssMatrix:
-    /* Code for EAssMatrix Goes Here */
-    visitIdent(p->u.eassmatrix_.ident_);
-    visitType(p->u.eassmatrix_.type_);
-    visitListExp(p->u.eassmatrix_.listexp_);
+    {
+      Ident varName = p->u.eassmatrix_.ident_;
+      Type varType = p->u.eassmatrix_.type_;
+      visitIdent(varName);
+      visitType(varType);
+      visitListExp(p->u.eassmatrix_.listexp_);
+
+      if (symbolExists(varName)) {
+          printf("Erro: Variável '%s' (matriz) já declarada anteriormente.\n", varName);
+      } else {
+          if (!addSymbol(varName, varType)) {
+              printf("Erro ao adicionar variável '%s'.\n", varName);
+          } else {
+              printf("Variável '%s' declarada com tipo '%s' (matriz).\n", varName, getTypeString(varType));
+          }
+      }
+      checkListExpTypes(p->u.eassmatrix_.listexp_, getTypeString(varType));
+    }
     break;
   case is_EAssMatrixOp:
-    /* Code for EAssMatrixOp Goes Here */
-    visitIdent(p->u.eassmatrixop_.ident_);
-    visitType(p->u.eassmatrixop_.type_);
-    visitExp(p->u.eassmatrixop_.exp_);
+    {
+      Ident varName = p->u.eassmatrixop_.ident_;
+      Type varType = p->u.eassmatrixop_.type_;
+      visitIdent(varName);
+      visitType(varType);
+      visitExp(p->u.eassmatrixop_.exp_);
+
+      if (symbolExists(varName)) {
+          printf("Erro: Variável '%s' (matriz) já declarada anteriormente.\n", varName);
+      } else {
+          if (!addSymbol(varName, varType)) {
+              printf("Erro ao adicionar variável '%s'.\n", varName);
+          } else {
+              printf("Variável '%s' declarada com tipo '%s' (matriz-op).\n", varName, getTypeString(varType));
+          }
+      }
+
+      const char* rightType = inferExpType(p->u.eassmatrixop_.exp_);
+      if (strcmp(getTypeString(varType), rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
+          printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'.\n", rightType, getTypeString(varType));
+      }
+    }
     break;
   case is_EAssInterface:
-    /* Code for EAssInterface Goes Here */
-    visitIdent(p->u.eassinterface_.ident_);
-    visitType(p->u.eassinterface_.type_);
-    visitListExp(p->u.eassinterface_.listexp_);
+    {
+      Ident varName = p->u.eassinterface_.ident_;
+      Type varType = p->u.eassinterface_.type_;
+      visitIdent(varName);
+      visitType(varType);
+      visitListExp(p->u.eassinterface_.listexp_);
+
+      if (symbolExists(varName)) {
+          printf("Erro: Variável '%s' (interface) já declarada anteriormente.\n", varName);
+      } else {
+          if (!addSymbol(varName, varType)) {
+              printf("Erro ao adicionar variável '%s'.\n", varName);
+          } else {
+              printf("Variável '%s' declarada com tipo '%s' (interface).\n", varName, getTypeString(varType));
+          }
+      }
+
+      checkListExpTypes(p->u.eassinterface_.listexp_, getTypeString(varType));
+    }
     break;
   case is_EkeyDecl:
-    /* Code for EkeyDecl Goes Here */
-    visitIdent(p->u.ekeydecl_.ident_);
-    visitType(p->u.ekeydecl_.type_);
+    {
+      Ident varName = p->u.ekeydecl_.ident_;
+      Type varType = p->u.ekeydecl_.type_;
+      visitIdent(varName);
+      visitType(varType);
+
+      if (!addSymbol(varName, varType)) {
+          printf("Erro: Variável '%s' já declarada.\n", varName);
+      } else {
+          printf("Variável '%s' declarada com tipo '%s'.\n", varName, getTypeString(varType));
+      }
+    }
     break;
   case is_EkeyDeclObj:
-    /* Code for EkeyDeclObj Goes Here */
     visitIdent(p->u.ekeydeclobj_.ident_);
     visitExp(p->u.ekeydeclobj_.exp_);
     break;
   case is_EIncr:
-    /* Code for EIncr Goes Here */
     visitExp(p->u.eincr_.exp_);
     break;
   case is_EDecr:
-    /* Code for EDecr Goes Here */
     visitExp(p->u.edecr_.exp_);
     break;
   case is_EIncrWithoutemicolon:
-    /* Code for EIncrWithoutemicolon Goes Here */
-    visitIdent(p->u.eincrwithoutemicolon_.ident_);
+    {
+      Ident varName = p->u.eincrwithoutemicolon_.ident_;
+      visitIdent(varName);
+      if (!symbolExists(varName)) {
+          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+      }
+    }
     break;
   case is_EDecrWithoutemicolon:
-    /* Code for EDecrWithoutemicolon Goes Here */
-    visitIdent(p->u.edecrwithoutemicolon_.ident_);
+    {
+      Ident varName = p->u.edecrwithoutemicolon_.ident_;
+      visitIdent(varName);
+      if (!symbolExists(varName)) {
+          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+      }
+    }
     break;
   case is_ExpList:
-    /* Code for ExpList Goes Here */
     visitListExp(p->u.explist_.listexp_);
     break;
   case is_EMinor:
-    /* Code for EMinor Goes Here */
     visitIdent(p->u.eminor_.ident_);
     visitExp(p->u.eminor_.exp_1);
     visitExp(p->u.eminor_.exp_2);
     break;
   case is_EVequal:
-    /* Code for EVequal Goes Here */
     visitIdent(p->u.evequal_.ident_);
     visitExp(p->u.evequal_.exp_1);
     visitExp(p->u.evequal_.exp_2);
     break;
   case is_EVatri:
-    /* Code for EVatri Goes Here */
     visitIdent(p->u.evatri_.ident_1);
     visitIdent(p->u.evatri_.ident_2);
     visitExp(p->u.evatri_.exp_);
     break;
   case is_ELt:
-    /* Code for ELt Goes Here */
+    /* Comparação */
+    checkBinaryExp(p->u.elt_.exp_1, p->u.elt_.exp_2, "ELt");
     visitExp(p->u.elt_.exp_1);
     visitExp(p->u.elt_.exp_2);
     break;
   case is_Equal:
-    /* Code for Equal Goes Here */
+    /* Comparação */
+    checkBinaryExp(p->u.equal_.exp_1, p->u.equal_.exp_2, "Equal");
     visitExp(p->u.equal_.exp_1);
     visitExp(p->u.equal_.exp_2);
     break;
   case is_EDiff:
-    /* Code for EDiff Goes Here */
+    /* Comparação */
+    checkBinaryExp(p->u.ediff_.exp_1, p->u.ediff_.exp_2, "EDiff");
     visitExp(p->u.ediff_.exp_1);
     visitExp(p->u.ediff_.exp_2);
     break;
   case is_EAdd:
-    /* Code for EAdd Goes Here */
+    /* Soma */
+    checkBinaryExp(p->u.eadd_.exp_1, p->u.eadd_.exp_2, "EAdd");
     visitExp(p->u.eadd_.exp_1);
     visitExp(p->u.eadd_.exp_2);
     break;
   case is_ESub:
-    /* Code for ESub Goes Here */
+    /* Subtração */
+    checkBinaryExp(p->u.esub_.exp_1, p->u.esub_.exp_2, "ESub");
     visitExp(p->u.esub_.exp_1);
     visitExp(p->u.esub_.exp_2);
     break;
   case is_EMul:
-    /* Code for EMul Goes Here */
+    /* Multiplicação */
+    checkBinaryExp(p->u.emul_.exp_1, p->u.emul_.exp_2, "EMul");
     visitExp(p->u.emul_.exp_1);
     visitExp(p->u.emul_.exp_2);
     break;
   case is_Call:
-    /* Code for Call Goes Here */
-    visitIdent(p->u.call_.ident_);
-    visitListExp(p->u.call_.listexp_);
+    {
+      Ident fname = p->u.call_.ident_;
+      visitIdent(fname);
+      visitListExp(p->u.call_.listexp_);
+
+      /* Verifica se a função existe */
+      if (!functionExists(fname)) {
+          printf("Erro: Função '%s' chamada antes da declaração.\n", fname);
+      }
+    }
     break;
   case is_EVar:
-    /* Code for EVar Goes Here */
-    visitIdent(p->u.evar_.ident_);
+    {
+      Ident varName = p->u.evar_.ident_;
+      visitIdent(varName);
+      if (!symbolExists(varName)) {
+          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+      }
+    }
     break;
   case is_EStr:
-    /* Code for EStr Goes Here */
     visitString(p->u.estr_.string_);
     break;
   case is_EInt:
-    /* Code for EInt Goes Here */
     printf("Expressão inteira detectada: ");
     visitInteger(p->u.eint_.integer_);
     visitInteger(p->u.eint_.integer_);
     break;
   case is_EChar:
-    /* Code for EChar Goes Here */
     visitChar(p->u.echar_.char_);
     break;
   case is_EDouble:
-    /* Code for EDouble Goes Here */
     visitDouble(p->u.edouble_.double_);
     break;
   case is_EVet:
-    /* Code for EVet Goes Here */
     visitIdent(p->u.evet_.ident_1);
     visitIdent(p->u.evet_.ident_2);
     break;
@@ -535,7 +908,6 @@ void visitListExp(ListExp listexp)
 {
   while(listexp  != 0)
   {
-    /* Code For ListExp Goes Here */
     visitExp(listexp->exp_);
     listexp = listexp->listexp_;
   }
@@ -546,34 +918,25 @@ void visitType(Type p)
   switch(p->kind)
   {
   case is_Type1:
-    /* Code for Type1 Goes Here */
     visitType(p->u.type1_.type_);
     visitInteger(p->u.type1_.integer_);
     break;
   case is_Type_int:
-    /* Code for Type_int Goes Here */
     break;
   case is_Type2:
-    /* Code for Type2 Goes Here */
     visitString(p->u.type2_.string_);
     break;
   case is_Type_string:
-    /* Code for Type_string Goes Here */
     break;
   case is_Type_float:
-    /* Code for Type_float Goes Here */
     break;
   case is_Type_double:
-    /* Code for Type_double Goes Here */
     break;
   case is_Type_char:
-    /* Code for Type_char Goes Here */
     break;
   case is_Type_interface:
-    /* Code for Type_interface Goes Here */
     break;
   case is_TypeIdent:
-    /* Code for TypeIdent Goes Here */
     visitIdent(p->u.typeident_.ident_);
     break;
 
@@ -588,7 +951,7 @@ void visitTypont(Typont p)
   switch(p->kind)
   {
   case is_TPonterio:
-    /* Code for TPonterio Goes Here */
+    /* Caso queira tratar ponteiros semanticamente, faria algo aqui */
     break;
 
   default:
@@ -601,21 +964,24 @@ void visitIdent(Ident i)
 {
   /* Code for Ident Goes Here */
 }
+
 void visitInteger(Integer i)
 {
   /* Code for Integer Goes Here */
-  /*printf("%d\n", i);  */
+  /*printf("%d\n", i); */
 }
+
 void visitDouble(Double d)
 {
   /* Code for Double Goes Here */
 }
+
 void visitChar(Char c)
 {
   /* Code for Char Goes Here */
 }
+
 void visitString(String s)
 {
   /* Code for String Goes Here */
 }
-
