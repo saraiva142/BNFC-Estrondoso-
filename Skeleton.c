@@ -10,6 +10,61 @@
 
 #include "Skeleton.h"
 
+
+/* LABEL/GOTO:
+Para fazer a semantica do label/Goto vamos criar uma tabela de símbolos
+Acho legal usar lista dinâmica nesse caso, o processo vai ser:
+1- Inicializar a tabela
+2- Adiciona uma label na tabela, retorna 1 se sucesso, 0 se duplicada
+3- Por final, vai verifica se uma label existe na tabela
+Dps entrar nos cases
+*/
+
+#define MAX_LABELS 1000
+
+typedef struct {
+    int labels[MAX_LABELS]; 
+    int count;              
+} LabelTable;
+
+LabelTable labelTable;
+
+void initLabelTable() {
+    labelTable.count = 0;
+}
+
+int addLabel(int label) {
+  int i = 0;
+    for (i = 0; i < labelTable.count; i++) {
+        if (labelTable.labels[i] == label) {
+            return 0; 
+        }
+    }
+    labelTable.labels[labelTable.count++] = label;
+    return 1; 
+}
+
+int labelExists(int label) {
+  int i = 0 ;
+    for (i = 0; i < labelTable.count; i++) {
+        if (labelTable.labels[i] == label) {
+            return 1; 
+        }
+    }
+    return 0; 
+}
+
+void printLabelTable() {
+    printf("\nTabela de Labels:\n");
+    int i = 0;
+    for ( i = 0; i < labelTable.count; i++) {
+        printf("Label %d\n", labelTable.labels[i]);
+    }
+    if (labelTable.count == 0) {
+        printf("Nenhuma label foi definida.\n");
+    }
+}
+
 void visitProgram(Program p)
 {
   switch(p->kind)
@@ -209,10 +264,29 @@ void visitStm(Stm p)
     break;
   case is_SLabel:
     /* Code for SLabel Goes Here */
+    printf("Visitando comando LABEL.\n");
+
+    /*Obtém o número da label*/
+    int label = p->u.slabel_.integer_ ;
+
+    if (!addLabel(label)) {
+        printf("Erro: Label %d já foi definida.\n", label);
+    } else {
+        printf("Label %d adicionada com sucesso.\n", label);
+    }
     visitInteger(p->u.slabel_.integer_);
     break;
   case is_SGoto:
     /* Code for SGoto Goes Here */
+    printf("Visitando comando GOTO.\n");
+
+    int gotoLabel = p->u.sgoto_.integer_;
+
+    if (!labelExists(gotoLabel)) {
+        printf("Erro: Label %d não definida antes do GOTO.\n", gotoLabel);
+    } else {
+        printf("GOTO para label %d validado com sucesso.\n", gotoLabel);
+    }
     visitInteger(p->u.sgoto_.integer_);
     break;
   case is_SLog:
@@ -224,25 +298,26 @@ void visitStm(Stm p)
     {
     case is_EIdent:
         printf("LOG: Variável detectada.\n");
+        /*Vamos ter q puxar a tabela aqui dps*/
         visitIdent(p->u.slog_.exp_->u.eident_.ident_);
         printf("LOG válido.\n");
-        break;
+      break;
 
     case is_EStr:
         printf("LOG: String detectada.\n");
         visitString(p->u.slog_.exp_->u.estr_.string_);
         printf("LOG válido.\n");
-        break;
+      break;
 
     case is_Call:
         printf("LOG: Função detectada.\n");
         visitIdent(p->u.slog_.exp_->u.call_.ident_);
         visitListExp(p->u.slog_.exp_->u.call_.listexp_);
         printf("LOG válido.\n");
-        break;
+      break;
     default:
         printf("Erro: Argumento inválido para o comando LOG.\n");
-        break;
+      break;
     }
     /*visitExp(p->u.slog_.exp_);*/
     break;
