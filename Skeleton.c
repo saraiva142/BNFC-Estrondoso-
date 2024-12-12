@@ -306,6 +306,7 @@ void visitProgram(Program p)
   }
 }
 
+int inFunctionContext = 0;
 void visitFunction(Function p)
 {
   switch(p->kind)
@@ -324,6 +325,13 @@ void visitFunction(Function p)
 
       visitListStm(p->u.fun_.liststm_1);
       visitListStm(p->u.fun_.liststm_2);
+
+      inFunctionContext = 1;
+
+      visitListStm(p->u.fun_.liststm_1);
+      visitListStm(p->u.fun_.liststm_2);
+
+      inFunctionContext = 0;
     }
     break;
 
@@ -504,7 +512,22 @@ void visitStm(Stm p)
     visitListStm(p->u.sifelse_.liststm_2);
     break;
   case is_SReturn:
+    printf("Visitando comando RETURN.\n");
+
+    if (!inFunctionContext) {
+        printf("Erro: Comando 'return' usado fora de uma função.\n");
+        break;
+    }
+
     visitExp(p->u.sreturn_.exp_);
+
+    const char* returnType = inferExpType(p->u.sreturn_.exp_);
+    if (strcmp(returnType, "tipo_desconhecido") == 0) {
+        printf("Aviso: Tipo da expressão retornada é desconhecido.\n");
+    } else {
+        printf("Expressão retornada com tipo: '%s'.\n", returnType);
+    }
+    /*visitExp(p->u.sreturn_.exp_);*/
     break;
   case is_SLabel:
     {
