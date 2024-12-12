@@ -245,7 +245,7 @@ static void checkBinaryExp(Exp left, Exp right, const char* opName) {
 
     
     if (strcmp(leftType, "tipo_desconhecido") == 0 || strcmp(rightType, "tipo_desconhecido") == 0) {
-        printf("Aviso: Não foi possível saber o tipo de um dos operandos em '%s'.\n", opName);
+        /*printf("Aviso: Não foi possível saber o tipo de um dos operandos em '%s'.\n", opName);*/
         return;
     }
 
@@ -410,8 +410,23 @@ void visitStm(Stm p)
     visitListStm(p->u.sblock_.liststm_);
     break;
   case is_SWhile:
+    printf("Visitando comando While.\n");
+
     visitExp(p->u.swhile_.exp_);
+
+    if (p->u.swhile_.exp_->kind != is_ELt &&   
+        p->u.swhile_.exp_->kind != is_Equal &&  
+        p->u.swhile_.exp_->kind != is_EDiff )
+    {
+        printf("Erro: Condição do 'While' inválida.\n");
+        break;
+    }
+
+    printf("Condição válida. Executando o bloco do While.\n");
     visitStm(p->u.swhile_.stm_);
+
+    /*visitExp(p->u.swhile_.exp_);*/
+    /*visitStm(p->u.swhile_.stm_);*/
     break;
   case is_SFor:
     printf("Verificando o FOR \n");
@@ -614,18 +629,18 @@ void visitExp(Exp p)
 
           if (declType) {
               const char* leftType = getTypeString(declType); 
-              printf("Variável '%s' tem tipo '%s' - Então OK.\n", varName, leftType);
+              printf("Variável '%s' tem tipo '%s'  \n", varName, leftType);
 
               if (strcmp(leftType, rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
-                  printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'.\n", rightType, leftType);
+                  printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'\n", rightType, leftType);
               }
           } else {
-              printf("Erro: Não foi possível determinar o tipo da variável '%s'.\n", varName);
+              printf("Erro: Não foi possível determinar o tipo da variável '%s'\n", varName);
           }
       }
 
       if (strcmp(rightType, "tipo_desconhecido") == 0) {
-          printf("Aviso: Não foi possível determinar o tipo da expressão no lado direito da atribuição.\n");
+          printf("Aviso: Não foi possível determinar o tipo da expressão no lado direito da atribuição\n");
       }
     }
     break;
@@ -653,12 +668,12 @@ void visitExp(Exp p)
       visitListExp(p->u.eassarray_.listexp_);
 
       if (symbolExists(varName)) {
-          printf("Erro: Variável '%s' já declarada anteriormente.\n", varName);
+          printf("Erro: Variável '%s' já declarada anteriormente\n", varName);
       } else {
           if (!addSymbol(varName, varType)) {
-              printf("Erro ao adicionar variável '%s'.\n", varName);
+              printf("Erro ao adicionar variável '%s'\n", varName);
           } else {
-              printf("Variável '%s' declarada com tipo '%s' (array).\n", varName, getTypeString(varType));
+              printf("Variável '%s' declarada com tipo '%s' (array)\n", varName, getTypeString(varType));
           }
       }
       checkListExpTypes(p->u.eassarray_.listexp_, getTypeString(varType));
@@ -672,14 +687,14 @@ void visitExp(Exp p)
       visitExp(p->u.eassarraysim_.exp_2);
 
       if (!symbolExists(varName)) {
-          printf("Erro: Variável (array) '%s' não foi declarada antes do uso.\n", varName);
+          printf("Erro: Variável (array) '%s' não foi declarada antes do uso\n", varName);
       } else {
           Type declType = getSymbolType(varName);
           if (declType) {
               const char* leftType = getTypeString(declType);
               const char* rightType = inferExpType(p->u.eassarraysim_.exp_2);
               if (strcmp(leftType, rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
-                  printf("Aviso: Tipo do elemento atribuído '%s' não coincide com o tipo da variável '%s' (array).\n", rightType, leftType);
+                  printf("Aviso: Tipo do elemento atribuído '%s' não coincide com o tipo da variável '%s' (array)\n", rightType, leftType);
               }
           }
       }
@@ -706,12 +721,12 @@ void visitExp(Exp p)
       visitListExp(p->u.eassmatrix_.listexp_);
 
       if (symbolExists(varName)) {
-          printf("Erro: Variável '%s' (matriz) já declarada anteriormente.\n", varName);
+          printf("Erro: Variável '%s' (matriz) já declarada anteriormente\n", varName);
       } else {
           if (!addSymbol(varName, varType)) {
-              printf("Erro ao adicionar variável '%s'.\n", varName);
+              printf("Erro ao adicionar variável '%s'\n", varName);
           } else {
-              printf("Variável '%s' declarada com tipo '%s' (matriz).\n", varName, getTypeString(varType));
+              printf("Variável '%s' declarada com tipo '%s' (matriz)\n", varName, getTypeString(varType));
           }
       }
       checkListExpTypes(p->u.eassmatrix_.listexp_, getTypeString(varType));
@@ -726,18 +741,18 @@ void visitExp(Exp p)
       visitExp(p->u.eassmatrixop_.exp_);
 
       if (symbolExists(varName)) {
-          printf("Erro: Variável '%s' (matriz) já declarada anteriormente.\n", varName);
+          printf("Erro: Variável '%s' (matriz) já declarada anteriormente\n", varName);
       } else {
           if (!addSymbol(varName, varType)) {
               printf("Erro ao adicionar variável '%s'.\n", varName);
           } else {
-              printf("Variável '%s' declarada com tipo '%s' (matriz-op).\n", varName, getTypeString(varType));
+              printf("Variável '%s' declarada com tipo '%s' (matriz-op)\n", varName, getTypeString(varType));
           }
       }
 
       const char* rightType = inferExpType(p->u.eassmatrixop_.exp_);
       if (strcmp(getTypeString(varType), rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
-          printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'.\n", rightType, getTypeString(varType));
+          printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'\n", rightType, getTypeString(varType));
       }
     }
     break;
@@ -750,12 +765,12 @@ void visitExp(Exp p)
       visitListExp(p->u.eassinterface_.listexp_);
 
       if (symbolExists(varName)) {
-          printf("Erro: Variável '%s' (interface) já declarada anteriormente.\n", varName);
+          printf("Erro: Variável '%s' (interface) já declarada anteriormente\n", varName);
       } else {
           if (!addSymbol(varName, varType)) {
-              printf("Erro ao adicionar variável '%s'.\n", varName);
+              printf("Erro ao adicionar variável '%s'\n", varName);
           } else {
-              printf("Variável '%s' declarada com tipo '%s' (interface).\n", varName, getTypeString(varType));
+              printf("Variável '%s' declarada com tipo '%s' (interface)\n", varName, getTypeString(varType));
           }
       }
 
@@ -770,9 +785,9 @@ void visitExp(Exp p)
       visitType(varType);
 
       if (!addSymbol(varName, varType)) {
-          printf("Erro: Variável '%s' já declarada.\n", varName);
+          printf("Erro: Variável '%s' já declarada\n", varName);
       } else {
-          printf("Variável '%s' declarada com tipo '%s'.\n", varName, getTypeString(varType));
+          printf("Variável '%s' declarada com tipo '%s'\n", varName, getTypeString(varType));
       }
     }
     break;
@@ -791,7 +806,7 @@ void visitExp(Exp p)
       Ident varName = p->u.eincrwithoutemicolon_.ident_;
       visitIdent(varName);
       if (!symbolExists(varName)) {
-          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+          printf("Erro: Variável '%s' não foi declarada antes do uso\n", varName);
       }
     }
     break;
@@ -800,7 +815,7 @@ void visitExp(Exp p)
       Ident varName = p->u.edecrwithoutemicolon_.ident_;
       visitIdent(varName);
       if (!symbolExists(varName)) {
-          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+          printf("Erro: Variável '%s' não foi declarada antes do uso\n", varName);
       }
     }
     break;
@@ -866,7 +881,7 @@ void visitExp(Exp p)
 
       /* Verifica se a função existe */
       if (!functionExists(fname)) {
-          printf("Erro: Função '%s' chamada antes da declaração.\n", fname);
+          printf("Erro: Função '%s' chamada antes da declaração\n", fname);
       }
     }
     break;
@@ -875,7 +890,7 @@ void visitExp(Exp p)
       Ident varName = p->u.evar_.ident_;
       visitIdent(varName);
       if (!symbolExists(varName)) {
-          printf("Erro: Variável '%s' não foi declarada antes do uso.\n", varName);
+          printf("Erro: Variável '%s' não foi declarada antes do uso\n", varName);
       }
     }
     break;
