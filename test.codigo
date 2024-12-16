@@ -44,22 +44,22 @@ function TrocarString (let k: int = 0; let l: int = 0; let new_text: string[] = 
             // Substitui a palavra se encontrada
             if (temp_wordd == wordd) {
                 // Adiciona a nova palavra ao novo texto
-                new_text[k] = new_wordd;
+                new_text[k] = new_word;
             } else {
                 // Adiciona a palavra não modificada
-                new_text[m] = temp_wordd;
+                new_text[m] = temp_word;
             }
             m++;
         } else {
             temp_word[j] = texto[i];
             l = l + 1;
         }
-        ik++;
+        k++;
     }
 
     // Verifica a última palavra
     if (temp_word == wordd) {
-        new_text[k] = new_wordd;
+        new_text[k] = new_word;
     } else {
         new_text[k] = temp_wordd;
     }
