@@ -38,7 +38,7 @@ void initLabelTable() {
 }
 
 int addLabel(int label) {
-  int i = 0;
+    int i = 0;
     for (i = 0; i < labelTable.count; i++) {
         if (labelTable.labels[i] == label) {
             return 0; 
@@ -49,7 +49,7 @@ int addLabel(int label) {
 }
 
 int labelExists(int label) {
-  int i = 0 ;
+    int i = 0 ;
     for (i = 0; i < labelTable.count; i++) {
         if (labelTable.labels[i] == label) {
             return 1; 
@@ -74,11 +74,13 @@ void printLabelTable() {
 typedef struct {
     Ident ident;
     Type type; 
+    char *value; 
 } SymbolEntry;
 
 typedef struct {
     Ident idents[MAX_SYMBOLS]; 
     Type types[MAX_SYMBOLS];   
+    char* values[MAX_SYMBOLS];
     int count;
 } SymbolTable;
 
@@ -108,14 +110,40 @@ Type getSymbolType(Ident ident) {
     return NULL; 
 }
 
+char* getSymbolValue(Ident ident) {
+    int i;
+    for (i = 0; i < symbolTable.count; i++) {
+        if (strcmp(symbolTable.idents[i], ident) == 0) {
+            return symbolTable.values[i];
+        }
+    }
+    return NULL;
+}
+
 int addSymbol(Ident ident, Type type) {
     if (symbolExists(ident)) {
         return 0; 
     }
     symbolTable.idents[symbolTable.count] = ident;
     symbolTable.types[symbolTable.count] = type;
+    symbolTable.values[symbolTable.count] = NULL;
     symbolTable.count++;
     return 1;
+}
+
+int setSymbolValue(Ident ident, const char* value) {
+    int i;
+    for (i = 0; i < symbolTable.count; i++) {
+        if (strcmp(symbolTable.idents[i], ident) == 0) {
+            if (symbolTable.values[i]) {
+                free(symbolTable.values[i]);
+            }
+            symbolTable.values[i] = (char*)malloc(strlen(value)+1);
+            strcpy(symbolTable.values[i], value);
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* TABELA DE FUNÇÕES:  
@@ -194,11 +222,35 @@ static const char* getTypeString(Type t) {
     }
 }
 
+/* Função auxiliar para determinar se um tipo é numérico */
+static int isNumericType(const char* t) {
+    return (strcmp(t, "int")==0 || strcmp(t, "float")==0 || strcmp(t, "double")==0);
+}
+
+/* Inferência do tipo de uma expressão */
+static const char* inferExpType(Exp e);
+
+static const char* unifyNumericTypes(const char* t1, const char* t2) {
+    if (!isNumericType(t1) || !isNumericType(t2)) return "tipo_desconhecido";
+    if (strcmp(t1,"int")==0 && strcmp(t2,"int")==0) return "int";
+    if (strcmp(t1,"double")==0 || strcmp(t2,"double")==0) return "double";
+    if (strcmp(t1,"float")==0 && strcmp(t2,"float")==0) return "float";
+    if ((strcmp(t1,"int")==0 && strcmp(t2,"float")==0) || 
+        (strcmp(t2,"int")==0 && strcmp(t1,"float")==0))
+        return "float";
+    return "double";
+}
+
 static const char* inferExpType(Exp e) {
     if (!e) return "tipo_desconhecido";
     switch (e->kind) {
         case is_EIdent: {
             Type varType = getSymbolType(e->u.eident_.ident_);
+            if (varType) return getTypeString(varType);
+            else return "tipo_desconhecido";
+        }
+        case is_EVar: {
+            Type varType = getSymbolType(e->u.evar_.ident_);
             if (varType) return getTypeString(varType);
             else return "tipo_desconhecido";
         }
@@ -210,6 +262,36 @@ static const char* inferExpType(Exp e) {
             return "double";
         case is_EChar:
             return "char";
+        case is_EAdd:
+        case is_ESub:
+        case is_EMul:
+        case is_EDiv:
+        {
+            const char* t1 = inferExpType((e->kind == is_EAdd)? e->u.eadd_.exp_1 :
+                                          (e->kind == is_ESub)? e->u.esub_.exp_1 :
+                                          (e->kind == is_EMul)? e->u.emul_.exp_1 :
+                                          e->u.ediv_.exp_1);
+            const char* t2 = inferExpType((e->kind == is_EAdd)? e->u.eadd_.exp_2 :
+                                          (e->kind == is_ESub)? e->u.esub_.exp_2 :
+                                          (e->kind == is_EMul)? e->u.emul_.exp_2 :
+                                          e->u.ediv_.exp_2);
+            if (strcmp(t1,"tipo_desconhecido")==0 || strcmp(t2,"tipo_desconhecido")==0) return "tipo_desconhecido";
+            if (!isNumericType(t1) || !isNumericType(t2)) return "tipo_desconhecido";
+            return unifyNumericTypes(t1, t2);
+        }
+        case is_ELt:
+        case is_Equal:
+        case is_EDiff:
+        {
+            const char* t1 = (e->kind == is_ELt)? inferExpType(e->u.elt_.exp_1) :
+                              (e->kind == is_Equal)? inferExpType(e->u.equal_.exp_1) :
+                              inferExpType(e->u.ediff_.exp_1);
+            const char* t2 = (e->kind == is_ELt)? inferExpType(e->u.elt_.exp_2) :
+                              (e->kind == is_Equal)? inferExpType(e->u.equal_.exp_2) :
+                              inferExpType(e->u.ediff_.exp_2);
+            if (strcmp(t1,"tipo_desconhecido")==0 || strcmp(t2,"tipo_desconhecido")==0) return "tipo_desconhecido";
+            return "int";
+        }
         default:
             return "tipo_desconhecido";
     }
@@ -226,43 +308,23 @@ static void checkListExpTypes(ListExp listexp, const char* expectedType) {
     }
 }
 
-/* Verificação de tipos em expressões binárias.  
-   Aqui assumiremos que EAdd, ESub, EMul, ELt, Equal, EDiff são binárias. 
-   Vamos verificar se os operandos têm tipos compatíveis. 
-   
-   Regra simples:
-   - Para EAdd, ESub, EMul: ambos devem ser numéricos (int, float, double). Caso contrário, aviso.
-   - Para ELt, Equal, EDiff: vamos assumir que só faz sentido comparar tipos compatíveis. Se forem diferentes, aviso.
-*/
-
-static int isNumericType(const char* t) {
-    return (strcmp(t, "int")==0 || strcmp(t, "float")==0 || strcmp(t, "double")==0);
-}
-
 static void checkBinaryExp(Exp left, Exp right, const char* opName) {
     const char* leftType = inferExpType(left);
     const char* rightType = inferExpType(right);
 
-    
-    if (strcmp(leftType, "tipo_desconhecido") == 0 || strcmp(rightType, "tipo_desconhecido") == 0) {
-        /*printf("Aviso: Não foi possível saber o tipo de um dos operandos em '%s'.\n", opName);*/
-        return;
-    }
-
-    if (strcmp(opName, "EAdd")==0 || strcmp(opName, "ESub")==0 || strcmp(opName, "EMul")==0) {
-        
+    if (strcmp(opName, "EAdd")==0 || strcmp(opName, "ESub")==0 || strcmp(opName, "EMul")==0 || strcmp(opName, "EDiv")==0) {
         if (!isNumericType(leftType) || !isNumericType(rightType)) {
             printf("Erro: Operação '%s' requer operandos numéricos. Encontrados '%s' e '%s'.\n", opName, leftType, rightType);
-        } else {
-            
-            if (strcmp(leftType, rightType)!=0) {
-                printf("Erro: Operação '%s' entre tipos diferentes '%s' e '%s'.\n", opName, leftType, rightType);
-            }
+            return;
+        }
+        const char* unified = unifyNumericTypes(leftType, rightType);
+        if (strcmp(unified, "tipo_desconhecido")==0) {
+            printf("Erro: Operação '%s' entre tipos incompatíveis '%s' e '%s'.\n", opName, leftType, rightType);
         }
     }
     else if (strcmp(opName, "ELt")==0 || strcmp(opName, "Equal")==0 || strcmp(opName, "EDiff")==0) {
-        if (strcmp(leftType, rightType) != 0) {
-            printf("Erro: Comparação '%s' entre tipos distintos '%s' e '%s'.\n", opName, leftType, rightType);
+        if (strcmp(leftType, "tipo_desconhecido")==0 || strcmp(rightType, "tipo_desconhecido")==0) {
+            printf("Erro: Comparação '%s' entre tipos desconhecidos.\n", opName);
         }
     }
 }
@@ -271,7 +333,8 @@ void printSymbolTable() {
     printf("\nTabela de Símbolos:\n");
     int i;
     for (i = 0; i < symbolTable.count; i++) {
-        printf("|Variável: '%s' | Tipo: '%s'|\n", symbolTable.idents[i], getTypeString(symbolTable.types[i]));
+        printf("|Variável: '%s' | Tipo: '%s' | Valor: '%s'|\n", symbolTable.idents[i], getTypeString(symbolTable.types[i]),
+               symbolTable.values[i] ? symbolTable.values[i] : "não atribuído");
     }
     if (symbolTable.count == 0) {
         printf("Nenhuma variável definida.\n");
@@ -432,9 +495,6 @@ void visitStm(Stm p)
 
     printf("Condição válida. Executando o bloco do While.\n");
     visitStm(p->u.swhile_.stm_);
-
-    /*visitExp(p->u.swhile_.exp_);*/
-    /*visitStm(p->u.swhile_.stm_);*/
     break;
   case is_SFor:
     printf("Verificando o FOR \n");
@@ -521,13 +581,14 @@ void visitStm(Stm p)
 
     visitExp(p->u.sreturn_.exp_);
 
+    {
     const char* returnType = inferExpType(p->u.sreturn_.exp_);
     if (strcmp(returnType, "tipo_desconhecido") == 0) {
         printf("Aviso: Tipo da expressão retornada é desconhecido.\n");
     } else {
         printf("Expressão retornada com tipo: '%s'.\n", returnType);
     }
-    /*visitExp(p->u.sreturn_.exp_);*/
+    }
     break;
   case is_SLabel:
     {
@@ -601,6 +662,74 @@ void visitStm(Stm p)
   }
 }
 
+/* Função auxiliar para criar um string representando a expressão (para armazenar valor).
+   Aqui, faremos de forma simples. Se for literal (int/str/double/char), convertemos para string.
+   Se for operador, concatenamos representações simples.
+   Isso é apenas ilustrativo. */
+static char* expToString(Exp p) {
+    if (!p) return strdup("desconhecido");
+    switch(p->kind) {
+        case is_EInt: {
+            char buffer[50];
+            sprintf(buffer, "%d", p->u.eint_.integer_);
+            return strdup(buffer);
+        }
+        case is_EDouble: {
+            char buffer[50];
+            sprintf(buffer, "%f", p->u.edouble_.double_);
+            return strdup(buffer);
+        }
+        case is_EStr:
+            return strdup(p->u.estr_.string_);
+        case is_EChar: {
+            char buffer[10];
+            sprintf(buffer, "%c", p->u.echar_.char_);
+            return strdup(buffer);
+        }
+        case is_EIdent:
+            return strdup(p->u.eident_.ident_);
+        case is_EVar:
+            return strdup(p->u.evar_.ident_);
+        case is_EAdd: {
+            char* left = expToString(p->u.eadd_.exp_1);
+            char* right = expToString(p->u.eadd_.exp_2);
+            char* res = malloc(strlen(left)+strlen(right)+2);
+            sprintf(res, "%s+%s", left, right);
+            free(left); free(right);
+            return res;
+        }
+        case is_ESub: {
+            char* left = expToString(p->u.esub_.exp_1);
+            char* right = expToString(p->u.esub_.exp_2);
+            char* res = malloc(strlen(left)+strlen(right)+2);
+            sprintf(res, "%s-%s", left, right);
+            free(left);free(right);
+            return res;
+        }
+        case is_EMul: {
+            char* left = expToString(p->u.emul_.exp_1);
+            char* right = expToString(p->u.emul_.exp_2);
+            char* res = malloc(strlen(left)+strlen(right)+2);
+            sprintf(res, "%s*%s", left, right);
+            free(left);free(right);
+            return res;
+        }
+        case is_EAssSimpl: {
+            char* left = strdup(p->u.easssimpl_.ident_);
+            char* right = expToString(p->u.easssimpl_.exp_);
+            char* res = malloc(strlen(left) + strlen(right) + 2);
+            sprintf(res, "%s=%s", left, right);
+            free(left);
+            free(right);
+            return res;
+        }
+
+        default:
+            return strdup("expressao_complexa");
+    }
+}
+
+
 void visitExp(Exp p)
 {
   switch(p->kind)
@@ -624,6 +753,10 @@ void visitExp(Exp p)
       if (strcmp(getTypeString(varType), rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
           printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'.\n", rightType, getTypeString(varType));
       }
+
+      char* valStr = expToString(p->u.eass_.exp_);
+      setSymbolValue(varName, valStr);
+      free(valStr);
     }
     break;
   case is_EIdent:
@@ -662,9 +795,9 @@ void visitExp(Exp p)
           }
       }
 
-      if (strcmp(rightType, "tipo_desconhecido") == 0) {
-          printf("Aviso: Não foi possível determinar o tipo da expressão no lado direito da atribuição\n");
-      }
+      char* valStr = expToString(p->u.easssimpl_.exp_);
+      setSymbolValue(varName, valStr);
+      free(valStr);
     }
     break;
   case is_EConst:
@@ -700,6 +833,7 @@ void visitExp(Exp p)
           }
       }
       checkListExpTypes(p->u.eassarray_.listexp_, getTypeString(varType));
+      setSymbolValue(varName, "[array]");
     }
     break;
   case is_EAssArraySim:
@@ -721,6 +855,8 @@ void visitExp(Exp p)
               }
           }
       }
+
+      setSymbolValue(varName, "[array_modificado]");
     }
     break;
   case is_EAPositionInArray:
@@ -753,6 +889,7 @@ void visitExp(Exp p)
           }
       }
       checkListExpTypes(p->u.eassmatrix_.listexp_, getTypeString(varType));
+      setSymbolValue(varName, "[matriz]");
     }
     break;
   case is_EAssMatrixOp:
@@ -777,6 +914,7 @@ void visitExp(Exp p)
       if (strcmp(getTypeString(varType), rightType) != 0 && strcmp(rightType, "tipo_desconhecido") != 0) {
           printf("Aviso: Tipo da expressão '%s' não coincide com o tipo da variável '%s'\n", rightType, getTypeString(varType));
       }
+      setSymbolValue(varName, "[matriz_op]");
     }
     break;
   case is_EAssInterface:
@@ -798,6 +936,7 @@ void visitExp(Exp p)
       }
 
       checkListExpTypes(p->u.eassinterface_.listexp_, getTypeString(varType));
+      setSymbolValue(varName, "[interface]");
     }
     break;
   case is_EkeyDecl:
@@ -812,6 +951,7 @@ void visitExp(Exp p)
       } else {
           printf("Variável '%s' declarada com tipo '%s'\n", varName, getTypeString(varType));
       }
+      setSymbolValue(varName, "não atribuído");
     }
     break;
   case is_EkeyDeclObj:
@@ -861,40 +1001,39 @@ void visitExp(Exp p)
     visitExp(p->u.evatri_.exp_);
     break;
   case is_ELt:
-    /* Comparação */
     checkBinaryExp(p->u.elt_.exp_1, p->u.elt_.exp_2, "ELt");
     visitExp(p->u.elt_.exp_1);
     visitExp(p->u.elt_.exp_2);
     break;
   case is_Equal:
-    /* Comparação */
     checkBinaryExp(p->u.equal_.exp_1, p->u.equal_.exp_2, "Equal");
     visitExp(p->u.equal_.exp_1);
     visitExp(p->u.equal_.exp_2);
     break;
   case is_EDiff:
-    /* Comparação */
     checkBinaryExp(p->u.ediff_.exp_1, p->u.ediff_.exp_2, "EDiff");
     visitExp(p->u.ediff_.exp_1);
     visitExp(p->u.ediff_.exp_2);
     break;
   case is_EAdd:
-    /* Soma */
     checkBinaryExp(p->u.eadd_.exp_1, p->u.eadd_.exp_2, "EAdd");
     visitExp(p->u.eadd_.exp_1);
     visitExp(p->u.eadd_.exp_2);
     break;
   case is_ESub:
-    /* Subtração */
     checkBinaryExp(p->u.esub_.exp_1, p->u.esub_.exp_2, "ESub");
     visitExp(p->u.esub_.exp_1);
     visitExp(p->u.esub_.exp_2);
     break;
   case is_EMul:
-    /* Multiplicação */
     checkBinaryExp(p->u.emul_.exp_1, p->u.emul_.exp_2, "EMul");
     visitExp(p->u.emul_.exp_1);
     visitExp(p->u.emul_.exp_2);
+    break;
+  case is_EDiv:
+    checkBinaryExp(p->u.ediv_.exp_1, p->u.ediv_.exp_2, "EDiv");
+    visitExp(p->u.ediv_.exp_1);
+    visitExp(p->u.ediv_.exp_2);
     break;
   case is_Call:
     {
@@ -989,7 +1128,6 @@ void visitTypont(Typont p)
   switch(p->kind)
   {
   case is_TPonterio:
-    /* Caso queira tratar ponteiros semanticamente, faria algo aqui */
     break;
 
   default:
@@ -1006,7 +1144,6 @@ void visitIdent(Ident i)
 void visitInteger(Integer i)
 {
   /* Code for Integer Goes Here */
-  /*printf("%d\n", i); */
 }
 
 void visitDouble(Double d)
