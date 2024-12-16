@@ -379,18 +379,15 @@ void visitFunction(Function p)
       Ident fname = p->u.fun_.ident_;
       visitIdent(fname);
 
-      /* Adiciona a função na tabela de funções */
       if (!addFunction(fname)) {
           printf("Erro: Função '%s' já declarada.\n", fname);
       } else {
           printf("Função '%s' declarada.\n", fname);
       }
 
-      visitListStm(p->u.fun_.liststm_1);
-      visitListStm(p->u.fun_.liststm_2);
-
       inFunctionContext = 1;
 
+    
       visitListStm(p->u.fun_.liststm_1);
       visitListStm(p->u.fun_.liststm_2);
 
@@ -744,7 +741,7 @@ void visitExp(Exp p)
       visitExp(p->u.eass_.exp_);
 
       if (symbolExists(varName)) {
-          printf("Aviso: Variável '%s' já declarada anteriormente.\n", varName);
+          printf("Erro: Variável '%s' já declarada anteriormente.\n", varName);
       } else {
           addSymbol(varName, varType);
           printf("Variável '%s' declarada com tipo '%s'.\n", varName, getTypeString(varType));
