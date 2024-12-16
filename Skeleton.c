@@ -744,7 +744,7 @@ void visitExp(Exp p)
       visitExp(p->u.eass_.exp_);
 
       if (symbolExists(varName)) {
-          printf("Erro: Variável '%s' já declarada anteriormente.\n", varName);
+          printf("Aviso: Variável '%s' já declarada anteriormente.\n", varName);
       } else {
           addSymbol(varName, varType);
           printf("Variável '%s' declarada com tipo '%s'.\n", varName, getTypeString(varType));
